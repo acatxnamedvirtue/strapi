@@ -4,11 +4,15 @@ import {
   SQLITE,
   appPort,
   generateApp,
+  getInstanceFeatures,
+  requireFeatures,
   resetDatabase,
   restoreDatabase,
   snapshotDatabase,
   startServer,
   type RestoreMode,
+  type InstanceFeatures,
+  type Requirements,
   type Server,
   type ServerMode,
 } from '@strapi/tests-shared';
@@ -39,6 +43,12 @@ export interface ResetOptions {
    * that changes the schema (Content-Type Builder).
    */
   resetMode: RestoreMode;
+  /**
+   * EE features and future flags the tests need, for example
+   * `test.use({ requires: { ee: ['cms-content-releases'] } })`. A test fails when the instance
+   * lacks one: it never skips. Tag EE-only tests `@ee` so CE runs leave them out.
+   */
+  requires: Requirements;
 }
 
 export interface AppWorkerFixtures {
@@ -46,17 +56,22 @@ export interface AppWorkerFixtures {
   server: Server;
   /** The spec file whose data is in the database, so file scope knows when to reset. */
   databaseOwner: { file?: string };
+  /** Edition, EE features and future flags of the worker's instance. */
+  features: InstanceFeatures;
 }
 
 export interface ResetFixtures {
   /** Restores the snapshot before a test or hook, following `resetScope`. Automatic. */
   databaseReset: void;
+  /** Fails the test when the instance lacks one of `requires`. Automatic. */
+  requirementsCheck: void;
 }
 
 export const test = base.extend<ResetOptions & ResetFixtures, AppOptions & AppWorkerFixtures>({
   serverMode: ['develop', { scope: 'worker', option: true }],
   resetScope: ['file', { option: true }],
   resetMode: ['sql', { option: true }],
+  requires: [{}, { option: true }],
 
   server: [
     async ({ serverMode }, use, workerInfo) => {
@@ -95,6 +110,21 @@ export const test = base.extend<ResetOptions & ResetFixtures, AppOptions & AppWo
       await use({});
     },
     { scope: 'worker' },
+  ],
+
+  features: [
+    async ({ server }, use) => {
+      await use(await getInstanceFeatures(server));
+    },
+    { scope: 'worker' },
+  ],
+
+  requirementsCheck: [
+    async ({ features, requires }, use) => {
+      requireFeatures(features, requires);
+      await use();
+    },
+    { auto: true },
   ],
 
   databaseReset: [
