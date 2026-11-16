@@ -39,8 +39,8 @@ export const APP_NODE_ENV = 'development';
 
 /**
  * Env every test app (and app generation) runs with, on top of the caller's env. The database
- * env comes from `startServer({ database })` (see db/database.ts), so a `DATABASE_*` exported
- * in the shell never reaches the apps.
+ * env comes from the `database` option of `startServer` and `seedApp` (see app/env.ts and
+ * db/database.ts), so a `DATABASE_*` exported in the shell never reaches the apps.
  */
 export const baseEnv = (): NodeJS.ProcessEnv => ({
   HOST,
